@@ -1,0 +1,17 @@
+install: true
+notifications:
+  email: false
+  slack:
+    secure: TPJ2J+CsSaHg02pj0GGxESjyCcS3C/zt0SiPOkqpZzK5Y1O2CdKS1IAKQhxnU3BzGFA36HO6Syi3eVqjQnwWfdgUs+BPHO4ZZbRISGs9DswfRcxUoHfGva8I/0HVyuK2O1SHZJ+FIaVIAkEuJU/DhMMzsnMLHM4WTndQqGdr/ck5/8Q8jI2uxLk93IIiD16+KyOgHvJwOrqUwM1SLi8AP6lHNyx2nFtchrlCHVp48ck95Of9YGzvrEFUk/cSoEkrdKuEZaOFm+nSypOiRLJgbsEGZsvI6XI3vEATybaJxMUJE3n7X1fapmVVyPOb4c3G+k8UvMJTJkX7SMZWstwIfCrEdVSNTt3UubndfdiqBDsc8CM5nhXxxNnGyI2U/Wc3We14DO9zWTbM0H1L8BCByz4WifMOAVS9W/wF8sWsj1Q1GRTS2yiJ5fi1HO1hKW8NQ2cw8Dn4Kf1tAbRCLqD8HPyMOqTa7t6S8ec2S6FCmnhMeN7kaws4GnFyqQXOuOO8KDKNwTOETWl/dlz2fKY4GalgFKYk+34bpii6G3LICWei2wVBmajVc+OTygv4zxO+f2I3cc9tt6/UIxNadmTfaqiFjDUCVzCZSypjQhLjOniC3PzBJ3Q7NnI1SSzwDkEvuuXLHGg27VTjonvYIkCRH+SGku34CAhMCCM0kGtAKQo=
+  on_success: always
+  on_failure: always
+
+script:
+- eval "$(ssh-agent -s)"
+- mkdir .travis
+- echo -e $RESIN_DEPLOY_KEY > .travis/id_rsa.pem
+- chmod 0600 .travis/id_rsa.pem
+- ssh-add .travis/id_rsa.pem
+- cat deploy/resinhost >> ~/.ssh/known_hosts
+- git remote add resin $RESIN_REMOTE
+- git push resin master
