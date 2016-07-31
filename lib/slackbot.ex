@@ -42,7 +42,7 @@ defmodule SlackBot do
   def hears(message, slack) do
     hears = [
       %{regex: ~r/.*temperature?(in)?(.*).*/, cb: fn tokens, msg, slack ->
-        result = Enum.at(room_temperature(tokens), 1)
+        {:ok, result} = room_temperature Enum.at(tokens, 1)
         send_message result, message.channel, slack
       end},
       %{regex: ~r/^hello (.*)/i, cb: fn tokens, msg, slack -> send_message("Why hello " <> Enum.at(tokens, 1), message.channel, slack) end},
