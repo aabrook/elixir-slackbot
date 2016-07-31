@@ -2,7 +2,10 @@
 # and its dependencies with the aid of the Mix.Config module.
 use Mix.Config
 
-config :slackbot, key: System.get_env("SLACKBOT_TOKEN")
+config :slackbot, key: System.get_env("SLACKBOT_TOKEN"),
+  couchdb_host: System.get_env("COUCHDB_HOST"),
+  couchdb_protocol: System.get_env("COUCHDB_PROTOCOL"),
+  couchdb_port: System.get_env("COUCHDB_PORT")
 
 # This configuration is loaded before any dependency and is restricted
 # to this project. If another project depends on this project, this
@@ -29,4 +32,4 @@ config :slackbot, key: System.get_env("SLACKBOT_TOKEN")
 # Configuration from the imported file will override the ones defined
 # here (which is why it is important to import them last).
 #
-#     import_config "#{Mix.env}.exs"
+import_config "#{Mix.env}.exs"
