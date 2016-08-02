@@ -14,7 +14,7 @@ defmodule SlackBot.Mixfile do
   #
   # Type "mix help compile.app" for more information
   def application do
-    [applications: [:logger,:slack,:couchdb_connector]]
+    [applications: [:logger,:slack, :httpotion]]
   end
 
   # Dependencies can be Hex packages:
@@ -29,6 +29,6 @@ defmodule SlackBot.Mixfile do
   defp deps do
     [{:slack, "~> 0.7.0"},
       {:websocket_client, git: "https://github.com/jeremyong/websocket_client"},
-      {:couchdb_connector, "~> 0.3.0"}]
+      {:httpotion, "~> 3.0.0"},{:poison, "~> 2.0"}]
   end
 end
