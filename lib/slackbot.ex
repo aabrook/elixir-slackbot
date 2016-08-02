@@ -7,17 +7,21 @@ defmodule SlackBot do
   end
 
   def dbprops do
-    %{protocol: Application.get_env(:slackbot, :couchdb_protocol), hostname: Application.get_env(:slackbot, :couchdb_host), port: Application.get_env(:slackbot, :couchdb_port)}
-  end
-
-  def thermo_db(props) do
-    {:ok, Map.merge(props, %{ database: "temperatures" })}
+    ElixirCouchDb.connection %{protocol: Application.get_env(:slackbot, :couchdb_protocol), host: Application.get_env(:slackbot, :couchdb_host), port: Application.get_env(:slackbot, :couchdb_port)}
   end
 
   def room_temperature room do
-    {:ok, props} = thermo_db dbprops
-    key = %{design: "temperatures", view: "by_room", key: room}
-    Couchdb.Connector.View.document_by_key(props, key)
+    {:ok, result} = ElixirCouchDb.get dbprops, "temperatures", "_design/temperatures/_view/by_room", %{group: true}
+    Enum.filter(result["rows"], fn row -> row["key"] == room end)
+  end
+
+  def rooms do
+    {:ok, result} = ElixirCouchDb.get dbprops, "temperatures", "_design/temperatures/_view/by_room", %{group: true}
+    Enum.reduce(result["rows"], [], fn row, acc -> acc ++ [row["key"]] end)
+  end
+
+  def temperature_message temp do
+    "The temperature is " <> temp["value"]["t"] <> "C with humidity of " <> temp["value"]["h"] <> "%"
   end
 
   def handle_connect(slack) do
@@ -25,7 +29,6 @@ defmodule SlackBot do
   end
 
   def handle_message(message = %{type: "message"}, slack) do
-    send_message("I heard that!", message.channel, slack)
     hears(message, slack)
   end
   def handle_message(_,_), do: :ok
@@ -41,9 +44,19 @@ defmodule SlackBot do
 
   def hears(message, slack) do
     hears = [
-      %{regex: ~r/.*temperature?(in)?(.*).*/, cb: fn tokens, msg, slack ->
-        {:ok, result} = room_temperature Enum.at(tokens, 1)
-        send_message result, message.channel, slack
+      %{regex: ~r/temperature (.*)/, cb: fn tokens, msg, slack ->
+        IO.puts Enum.at(tokens, 0)
+        result = room_temperature Enum.at(tokens, 1)
+        if Enum.empty? result do
+          send_message("Not found", message.channel, slack)
+        else
+          [t] = result
+          send_message(temperature_message(t), message.channel, slack)
+        end
+      end},
+      %{regex: ~r/list rooms/, cb: fn tokens, msg, slack ->
+        result = Enum.join(rooms, ", ")
+        send_message("Rooms available: " <> result, message.channel, slack)
       end},
       %{regex: ~r/^hello (.*)/i, cb: fn tokens, msg, slack -> send_message("Why hello " <> Enum.at(tokens, 1), message.channel, slack) end},
       %{regex: ~r/^sup$/i, cb: fn tokens, msg, slack -> send_message("Not much. Sup wit u?", message.channel, slack) end},
