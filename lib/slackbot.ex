@@ -22,17 +22,25 @@ defmodule SlackBot do
   end
 
   def dbprops do
-    ElixirCouchDb.connection %{protocol: Application.get_env(:slackbot, :couchdb_protocol), host: Application.get_env(:slackbot, :couchdb_host), port: Application.get_env(:slackbot, :couchdb_port)}
+    %{}
   end
 
   def room_temperature room do
-    {:ok, result} = ElixirCouchDb.get dbprops, "temperatures", "_design/temperatures/_view/by_room", %{group: true}
+    {:ok, result} = ElixirCouchDb.get dbprops, "stasis", "_design/temperatures/_view/by_room", %{group: true}
     Enum.filter(result["rows"], fn row -> row["key"] == room end)
   end
 
   def rooms do
-    {:ok, result} = ElixirCouchDb.get dbprops, "temperatures", "_design/temperatures/_view/by_room", %{group: true}
-    Enum.reduce(result["rows"], [], fn row, acc -> acc ++ [row["key"]] end)
+    {:ok, result} = ElixirCouchDb.serverConnection
+    |> Couchex.open_db("stasis")
+    |> Tuple.to_list
+    |> Enum.at(1)
+    |> IO.inspect
+    |> Couchex.fetch_view({"temperatures", "list_all"})
+
+    Enum.each(result, &IO.inspect/1)
+#{:ok, result} = ElixirCouchDb.get dbprops, "stasis", "_design/temperatures/_view/by_room", %{group: true}
+#   Enum.reduce(result["rows"], [], fn row, acc -> acc ++ [row["key"]] end)
   end
 
   def temperature_message temp do

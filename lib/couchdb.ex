@@ -1,17 +1,34 @@
 defmodule ElixirCouchDb do
 
-  def connection opts do
+  def connection opts \\ %{} do
     options = Map.merge(%{
-      protocol: 'http',
-      host: '127.0.0.1',
-      port: 5984,
-      cache: nil,
-      timeout: 5000,
-      auth: nil
-    }, opts)
+                          protocol: Application.get_env(:slackbot,:couchdb_protocol),
+                          host:     Application.get_env(:slackbot,:couchdb_host),
+                          port: Application.get_env(:slackbot,:couchdb_port),
+                          cache: nil,
+                          timeout: 5000,
+                          auth: nil
+                        }, opts)
 
     baseUrl = "#{options[:protocol]}://#{options[:host]}:#{options[:port]}"
     Map.merge(options, %{baseUrl: baseUrl})
+  end
+
+  def default_auth do
+    [
+      {:basic_auth, {
+        Application.get_env(:slackbot,:couchdb_username),
+        Application.get_env(:slackbot,:couchdb_password)
+      }}
+    ]
+  end
+
+  def serverConnection opts \\ %{} do
+    opts
+    |> connection
+    |> Map.fetch!(:baseUrl)
+    |> IO.inspect
+    |> Couchex.server_connection(default_auth)
   end
 
   def getRequest options, target, query do

@@ -5,7 +5,9 @@ use Mix.Config
 config :slackbot, key: System.get_env("SLACKBOT_TOKEN"),
   couchdb_host: System.get_env("COUCHDB_HOST"),
   couchdb_protocol: System.get_env("COUCHDB_PROTOCOL"),
-  couchdb_port: System.get_env("COUCHDB_PORT")
+  couchdb_port: System.get_env("COUCHDB_PORT"),
+  couchdb_username: System.get_env("COUCHDB_USERNAME"),
+  couchdb_password: System.get_env("COUCHDB_PASSWORD")
 
 # This configuration is loaded before any dependency and is restricted
 # to this project. If another project depends on this project, this
