@@ -30,6 +30,7 @@ defmodule SlackBot.Mixfile do
     [{:slack, "~> 0.7.0"},
       {:couchex, "~> 0.7.0"},
       {:websocket_client, git: "https://github.com/jeremyong/websocket_client"},
-      {:httpotion, "~> 3.0.0"},{:poison, "~> 2.0"}]
+      {:httpotion, "~> 3.0.0"},{:poison, "~> 3.0"},
+    ]
   end
 end

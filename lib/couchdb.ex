@@ -27,7 +27,6 @@ defmodule ElixirCouchDb do
     opts
     |> connection
     |> Map.fetch!(:baseUrl)
-    |> IO.inspect
     |> Couchex.server_connection(default_auth)
   end
 
