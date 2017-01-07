@@ -14,7 +14,7 @@ defmodule SlackBot.Mixfile do
   #
   # Type "mix help compile.app" for more information
   def application do
-    [applications: [:logger,:slack, :httpotion, :couchex]]
+    [applications: [:logger,:slack, :httpotion, :poison]]
   end
 
   # Dependencies can be Hex packages:

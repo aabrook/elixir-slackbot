@@ -8,39 +8,34 @@ defmodule SlackBot do
   end
 
   heard "list rooms", tokens do
-    "Rooms available: " <> Enum.join(rooms, ", ")
+    case rooms do
+      x when is_list(x) -> "Rooms available: " <> Enum.join(rooms, ", ")
+      x when is_bitstring(x) -> x
+      _ -> "Failed to find rooms"
+    end
   end
 
   def start do
     start_link(Application.get_env(:slackbot, :key))
   end
 
-  def rooms do
-    ElixirCouchDb.serverConnection
-    |> open_db("stasis")
-    |> then(&fetch_view(&1, {"locations", "rooms"}, [:group]))
-    |> then(&decode_room_names(&1))
+  defp rooms do
+    ElixirCouchDb.connection
+    |> then(&(ElixirCouchDb.get(&1, "stasis", "_design/locations/_view/rooms", [query: %{group: true}])))
+    |> then(&(decode_room_names(&1)))
     |> return
   end
 
-  def temperature_message temp do
-    ElixirCouchDb.serverConnection
-    |> open_db("stasis")
-    |> then(&fetch_view(&1, {"temperatures", "list_all"}))
-    |> then(&decode_temperature_rows(&1))
+  defp temperature_message temp do
+    ElixirCouchDb.connection
+    |> then(&(ElixirCouchDb.get(&1, "stasis", "_design/temperatures/_view/list_all")))
+    |> then(&(Map.get(&1, "rows")))
+    |> then(&(decode_temperature_rows &1))
     |> then(&Enum.sort(&1, fn a, b -> compare_by_time(a, b) end))
-    |> then(&Enum.reduce(&1, %{}, fn x, acc ->
-      case acc[x.r] do
-        nil -> Map.put(acc, x.r, "#{x.time} #{x.r} #{x.h}% #{x.t}C")
-        _ -> acc
-      end
-    end))
-    |> then(&Map.to_list(&1))
-    |> then(&Enum.map(&1, fn x -> elem(x, 1) end))
-    |> IO.inspect
-    |> then(&Enum.join(&1, "\n"))
+    |> then(&Enum.group_by(&1, fn x -> Map.get(x, :r) end))
     |> IO.inspect
 
+    "Not finished"
   end
 
   defp compare_by_time(a, b) do
@@ -56,14 +51,16 @@ defmodule SlackBot do
   end
 
   defp decode_room_names(rooms) do
-    Enum.reduce(rooms, [], fn({[{_, k}, v]}, acc) ->
-      [k | acc]
+    Enum.reduce(Map.get(rooms, "rows"), [], fn(%{"key" => k}, acc) ->
+      [IO.inspect(k) | acc]
     end)
   end
 
-  def decode_temperature_rows rows do
+  defp decode_temperature_rows rows do
     {:ok,
-      Enum.reduce(rows, [], fn {[_, _, {_, {[{_, t}, {_, h}, {_, r}, {_, time}]}}]}, acc ->
+      Enum.reduce(rows, [], fn %{"id" => _,
+                      "key" => key,
+                      "value" => %{"r" => r, "h" => h, "t" => t, "time" => time}}, acc ->
         [%{r: r, h: h, t: t, time: time} | acc]
       end)
     }
@@ -77,7 +74,7 @@ defmodule SlackBot do
         _ -> func.(data)
       end
     rescue
-      _ -> {:error, "Nope"}
+      e -> {:error, "Nope: #{e.message}"}
     end
   end
 

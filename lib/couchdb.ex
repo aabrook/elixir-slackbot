@@ -1,17 +1,27 @@
 defmodule ElixirCouchDb do
+  require Logger
 
   def connection opts \\ %{} do
     options = Map.merge(%{
                           protocol: Application.get_env(:slackbot,:couchdb_protocol),
                           host:     Application.get_env(:slackbot,:couchdb_host),
+                          hostname:     Application.get_env(:slackbot,:couchdb_host),
                           port: Application.get_env(:slackbot,:couchdb_port),
                           cache: nil,
                           timeout: 5000,
-                          auth: nil
+                          user: Application.get_env(:slackbot,:couchdb_username),
+                          password: Application.get_env(:slackbot,:couchdb_password),
                         }, opts)
 
-    baseUrl = "#{options[:protocol]}://#{options[:host]}:#{options[:port]}"
+    baseUrl = "#{options[:protocol]}://#{options[:user]}:#{options[:password]}@#{options[:host]}:#{options[:port]}"
     Map.merge(options, %{baseUrl: baseUrl})
+  end
+
+  def auth do
+    [:basic_auth, {
+       Application.get_env(:slackbot,:couchdb_username),
+       Application.get_env(:slackbot,:couchdb_password)
+     }]
   end
 
   def default_auth do
@@ -30,28 +40,8 @@ defmodule ElixirCouchDb do
     |> Couchex.server_connection(default_auth)
   end
 
-  def getRequest options, target, query do
-    HTTPotion.get options.baseUrl <> "/" <> target, query: query
-  end
-
-  def postRequest options, target, query do
-    HTTPotion.post options.baseUrl <> "/" <> target, query: query
-  end
-
-  def deleteRequest options, target, query do
-    HTTPotion.post options.baseUrl <> "/" <> target, query: query
-  end
-
-  def putRequest options, target, query do
-    HTTPotion.post options.baseUrl <> "/" <> target, query: query
-  end
-
-  def listDatabases options do
-    parseResult(getRequest options, "_all_dbs", %{})
-  end
-
-  def get options, dbname, uri, query do
-    parseResult(getRequest options, dbname <> "/" <> uri, query)
+  def get options, dbname, uri, query \\ [] do
+    parseResult(getRequest(options, dbname <> "/" <> uri, query))
   end
 
   def create options, dbname do
@@ -82,16 +72,42 @@ defmodule ElixirCouchDb do
     end
   end
 
-  def parseResult result do
+  def listDatabases options do
+    parseResult(getRequest options, "_all_dbs", %{})
+  end
+
+  defp getRequest options, target, query \\ [] do
+    IO.inspect options
+    IO.inspect target
+    IO.inspect query
+    HTTPotion.get(options.baseUrl <> "/" <> target, [auth | query])
+  end
+
+  defp postRequest options, target, query do
+    HTTPotion.post options.baseUrl <> "/" <> target, [auth | query]
+  end
+
+  defp deleteRequest options, target, query do
+    HTTPotion.post options.baseUrl <> "/" <> target, [auth | query]
+  end
+
+  defp putRequest options, target, query do
+    HTTPotion.post options.baseUrl <> "/" <> target, [auth | query]
+  end
+
+  defp parseResult result do
     (result.status_code == 200 && successMessage result) || errorMessage result
   end
 
-  def errorMessage result do
-    {:error, %{status_code: result.status_code,
-      message: result.message}}
+  defp errorMessage result do
+    case Poison.decode(result.body) do
+      %{body: m} -> {:error, Map.get(m, "reason")}
+      %{"message" => message} -> {:error, message}
+      x -> {:error, x}
+    end
   end
 
-  def successMessage result do
+  defp successMessage result do
     {:ok, Poison.decode! result.body}
   end
 
